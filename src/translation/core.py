@@ -59,7 +59,7 @@ def accurate_translate(text: str, translation_object_type: str):
 
 def simple_translate(text: str):
     try:
-        translate = translators.translate_text(text, translator=random.choice(translators_pool), from_language='tr', to_language='ru')
+        translate = translators.translate_text(text, translator='yandex', from_language='tr', to_language='ru')
     except Exception:
         return simple_translate(text)
 
