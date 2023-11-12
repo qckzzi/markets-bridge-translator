@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import json
 import logging
-import time
 
 import pika
 
@@ -9,7 +8,7 @@ from markets_bridge.services import (
     Sender,
 )
 from translation.core import (
-    translate,
+    simple_translate,
 )
 
 
@@ -21,7 +20,9 @@ def callback(ch, method, properties, body):
         entity_type = message['type']
 
         logging.info(f'The "{text}" {entity_type.lower()} was received for translation.')
-        translation = translate(text, entity_type)
+
+        # TODO: Use accurate_translate
+        translation = simple_translate(text)
 
         sending_function = Sender.get_sending_method_for_entity_type(entity_type)
         sending_function(entity_id, translation)
@@ -34,9 +35,6 @@ def callback(ch, method, properties, body):
         return
     else:
         logging.info(f'The "{text}" product has been translated into "{translation}"')
-
-    # Translator usage limit (can send 3 requests per minute)
-    time.sleep(20)
 
 
 if __name__ == '__main__':

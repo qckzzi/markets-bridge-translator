@@ -2,15 +2,13 @@ PRODUCT = [
     {
         'role': 'user',
         'content': (
-            'Untranslated text: "Macbook Air M1 Çip 8gb 256gb '
-            'Ssd Macos 13 Qhd Taşınabilir Bilgisayar Uzay Grisi"'
+            'Untranslated text: "Macbook Air 13.6" M2 8gb 256gb Ssd Uzay Grisi"'
         )
     },
     {
         'role': 'assistant',
         'content': (
-            'Macbook Air M1 Чип, 8 ГБ оперативной памяти, 256 ГБ SSD-накопитель, '
-            'macOS, 13-дюймовый QHD портативный компьютер в цвете Space gray'
+            'Macbook Air 13,6 дюйма M2, 8 ГБ, 256 ГБ SSD, Серый космос'
         )
     },
     {

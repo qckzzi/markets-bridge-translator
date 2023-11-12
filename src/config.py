@@ -24,6 +24,4 @@ untranslated_characteristic_url = f'{mb_domain}api/v1/provider/characteristics/r
 untranslated_value_url = f'{mb_domain}api/v1/provider/characteristic_values/random_untranslated/'
 
 # OpenAI
-openai_api_key = os.getenv('OPENAI_API_KEY')
-
-
+openai_api_key = ...
