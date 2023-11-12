@@ -1,3 +1,4 @@
+import random
 import time
 from datetime import (
     datetime,
@@ -6,6 +7,9 @@ from datetime import (
 import translators
 from openai import (
     OpenAI,
+)
+from translators import (
+    translators_pool,
 )
 
 import config
@@ -54,7 +58,9 @@ def accurate_translate(text: str, translation_object_type: str):
 
 
 def simple_translate(text: str):
-    translate = translators.translate_text(text, translator='deepl', from_language='tr', to_language='ru')
+    try:
+        translate = translators.translate_text(text, translator=random.choice(translators_pool), from_language='tr', to_language='ru')
+    except Exception:
+        return simple_translate(text)
 
     return translate
-
