@@ -1,50 +1,55 @@
 #!/usr/bin/env python
-import argparse
-import threading
+import json
+import logging
+import time
 
-from category_translate import (
-    translate_categories,
+import pika
+
+from markets_bridge.services import (
+    Sender,
 )
-from characteristic_translate import (
-    translate_characteristics,
-)
-from characteristic_value_translate import (
-    translate_characteristic_values,
-)
-from product_translate import (
-    translate_products,
+from translation.core import (
+    translate,
 )
 
 
-def main():
-    # TODO: Переделать под ООП
-    translate_products()
-    translate_characteristics()
-    translate_characteristic_values()
-    translate_categories()
+def callback(ch, method, properties, body):
+    try:
+        message = json.loads(body)
+        entity_id = message['id']
+        text = message['text']
+        entity_type = message['type']
+
+        logging.info(f'The "{text}" {entity_type.lower()} was received for translation.')
+        translation = translate(text, entity_type)
+
+        sending_function = Sender.get_sending_method_for_entity_type(entity_type)
+        sending_function(entity_id, translation)
+
+    except KeyError as e:
+        logging.exception(f'Body validation error: {e}')
+        return
+    except Exception as e:
+        logging.exception(f'There was a problem: {e}')
+        return
+    else:
+        logging.info(f'The "{text}" product has been translated into "{translation}"')
+
+    # Translator usage limit (can send 3 requests per minute)
+    time.sleep(20)
 
 
 if __name__ == '__main__':
-    # TODO: Слишком неэффективно использовать потоки в данном случае, необходимо переписать сервис на Fast Api
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--num_threads',
-        type=int,
-        default=1,
-        help='Количество потоков',
-    )
-    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 
-    MAX_THREADS_NUMBER = 20
-    if args.num_threads > MAX_THREADS_NUMBER:
-        args.num_threads = MAX_THREADS_NUMBER
+    connection_parameters = pika.ConnectionParameters(host='localhost', heartbeat=300, blocked_connection_timeout=300)
+    connection = pika.BlockingConnection(connection_parameters)
+    channel = connection.channel()
+    channel.queue_declare('translation')
+    channel.basic_consume('translation', callback, auto_ack=True)
 
-    threads = []
-
-    for _ in range(args.num_threads):
-        t = threading.Thread(target=main)
-        t.start()
-        threads.append(t)
-
-    for t in threads:
-        t.join()
+    try:
+        channel.start_consuming()
+    except KeyboardInterrupt:
+        channel.close()
+        connection.close()
