@@ -23,4 +23,5 @@ untranslated_category_url = f'{mb_domain}api/v1/provider/categories/random_untra
 untranslated_characteristic_url = f'{mb_domain}api/v1/provider/characteristics/random_untranslated/'
 untranslated_value_url = f'{mb_domain}api/v1/provider/characteristic_values/random_untranslated/'
 
-
+# OpenAI
+openai_api_key = ...
