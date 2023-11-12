@@ -54,7 +54,7 @@ def accurate_translate(text: str, translation_object_type: str):
 
 
 def simple_translate(text: str):
-    translate = translators.translate_text(text, translator='yandex', from_language='tr', to_language='ru')
+    translate = translators.translate_text(text, translator='deepl', from_language='tr', to_language='ru')
 
     return translate
 
