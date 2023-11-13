@@ -12,7 +12,7 @@ load_dotenv()
 mb_domain = os.getenv('MB_DOMAIN')
 
 if not mb_domain:
-    raise ValueError('Не задан домен Markets-Bridge.')
+    raise ValueError('MB_DOMAIN not set')
 
 products_url = f'{mb_domain}api/v1/provider/products/'
 categories_url = f'{mb_domain}api/v1/provider/categories/'
@@ -24,4 +24,7 @@ untranslated_characteristic_url = f'{mb_domain}api/v1/provider/characteristics/r
 untranslated_value_url = f'{mb_domain}api/v1/provider/characteristic_values/random_untranslated/'
 
 # OpenAI
-openai_api_key = ...
+openai_api_key = os.getenv('OPENAI_API_KEY')
+
+if not openai_api_key:
+    raise ValueError('OPENAI_API_KEY not set')
