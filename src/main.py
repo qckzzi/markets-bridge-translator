@@ -8,10 +8,12 @@ from markets_bridge.services import (
     Sender,
 )
 from translation.core import (
+    accurate_translate,
     simple_translate,
 )
 
 
+# TODO: Декомпозировать
 def callback(ch, method, properties, body):
     try:
         message = json.loads(body)
@@ -21,8 +23,16 @@ def callback(ch, method, properties, body):
 
         logging.info(f'The "{text}" {entity_type.lower()} was received for translation.')
 
-        # TODO: Use accurate_translate
-        translation = simple_translate(text)
+        is_need_accurate_translation = entity_type == 'PRODUCT'
+
+        if is_need_accurate_translation:
+            try:
+                translation = accurate_translate(text, entity_type)
+            except Exception as e:
+                logging.error(f'An error has occurred. A simple translation is used. Error: {e}')
+                translation = simple_translate(text)
+        else:
+            translation = simple_translate(text)
 
         sending_function = Sender.get_sending_method_for_entity_type(entity_type)
         sending_function(entity_id, translation)
