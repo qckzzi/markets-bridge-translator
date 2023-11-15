@@ -12,13 +12,14 @@ from translators import (
     translators_pool,
 )
 
-import config
+from markets_bridge.utils import (
+    get_openai_api_key,
+)
 from translation import (
     promts,
 )
 
 
-_client = None
 _last_accurate_translate_time = None
 
 
@@ -28,11 +29,6 @@ def accurate_translate(text: str, translation_object_type: str):
     Example:
         translate('iPad 9. Nesil 64 GB', 'PRODUCT')
     """
-
-    global _client
-
-    if not _client:
-        _client = OpenAI(api_key=config.openai_api_key)
 
     global _last_accurate_translate_time
 
@@ -48,7 +44,11 @@ def accurate_translate(text: str, translation_object_type: str):
     message = {'role': 'user', 'content': f'Untranslated text: "{text}"'}
     messages = getattr(promts, translation_object_type)[:]
     messages.append(message)
-    completion = _client.chat.completions.create(
+
+    api_key = get_openai_api_key()
+    client = OpenAI(api_key=api_key)
+
+    completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages,
         temperature=0,

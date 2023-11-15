@@ -4,8 +4,9 @@ import logging
 
 import pika
 
-from markets_bridge.services import (
+from markets_bridge.utils import (
     Sender,
+    write_log_entry,
 )
 from translation.core import (
     accurate_translate,
@@ -29,7 +30,9 @@ def callback(ch, method, properties, body):
             try:
                 translation = accurate_translate(text, entity_type)
             except Exception as e:
-                logging.error(f'An error has occurred. A simple translation is used. Error: {e}')
+                error = f'An error has occurred. A simple translation is used. Error: {e}'
+                write_log_entry(error)
+                logging.error(error)
                 translation = simple_translate(text)
         else:
             translation = simple_translate(text)
@@ -38,26 +41,25 @@ def callback(ch, method, properties, body):
         sending_function(entity_id, translation)
 
     except KeyError as e:
-        logging.exception(f'Body validation error: {e}')
+        error = f'Body validation error: {e}'
+        write_log_entry(error)
+        logging.error(error)
         return
     except Exception as e:
-        logging.exception(f'There was a problem: {e}')
+        error = f'There was a problem: {e}'
+        write_log_entry(error)
+        logging.exception(error)
         return
     else:
-        logging.info(f'The "{text}" product has been translated into "{translation}"')
+        logging.info(f'The "{text}" {entity_type.lower()} has been translated into "{translation}"')
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 
     connection_parameters = pika.ConnectionParameters(host='localhost', heartbeat=300, blocked_connection_timeout=300)
-    connection = pika.BlockingConnection(connection_parameters)
-    channel = connection.channel()
-    channel.queue_declare('translation')
-    channel.basic_consume('translation', callback, auto_ack=True)
-
-    try:
+    with pika.BlockingConnection(connection_parameters) as connection:
+        channel = connection.channel()
+        channel.queue_declare('translation')
+        channel.basic_consume('translation', callback, auto_ack=True)
         channel.start_consuming()
-    except KeyboardInterrupt:
-        channel.close()
-        connection.close()
