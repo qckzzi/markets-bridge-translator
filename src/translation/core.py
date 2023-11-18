@@ -21,6 +21,7 @@ from translation import (
 
 
 _last_accurate_translate_time = None
+_translation_timeout = 30.0
 
 
 def accurate_translate(text: str, translation_object_type: str):
@@ -46,20 +47,28 @@ def accurate_translate(text: str, translation_object_type: str):
     messages.append(message)
 
     api_key = get_openai_api_key()
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key, timeout=_translation_timeout)
 
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages,
         temperature=0,
+        timeout=_translation_timeout,
     )
 
     return completion.choices[0].message.content
 
 
+# FIXME: DRY
 def simple_translate(text: str):
     try:
-        translate = translators.translate_text(text, translator='alibaba', from_language='tr', to_language='ru')
+        translate = translators.translate_text(
+            text,
+            translator='alibaba',
+            from_language='tr',
+            to_language='ru',
+            timeout=_translation_timeout,
+        )
     except Exception:
         return _simple_translate_with_random_translator(text)
 
@@ -72,7 +81,8 @@ def _simple_translate_with_random_translator(text: str):
             text,
             translator=random.choice(translators_pool),
             from_language='tr',
-            to_language='ru'
+            to_language='ru',
+            timeout=_translation_timeout,
         )
     except Exception:
         return _simple_translate_with_random_translator(text)
