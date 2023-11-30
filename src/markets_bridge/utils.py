@@ -167,15 +167,25 @@ def write_log_entry(message: str):
 
 def get_openai_api_key() -> str:
     """Возвращает OpenAI API ключ из сервиса Markets-Bridge."""
+    return _get_system_environment_value('OPENAI_API_KEY')
+
+
+def get_openai_expensive_mode() -> bool:
+    """Возвращает режим работы OpenAI (дорогой или экономный)."""
+    return _get_system_environment_value('IS_OPENAI_EXPENSIVE_MODE').lower() == 'true'
+
+
+def _get_system_environment_value(environment: str) -> str:
+    """Возвращает значение записи из таблицы системных переменных по ключу."""
 
     headers = get_authorization_headers()
-    response = requests.get(f'{config.mb_system_environments_url}OPENAI_API_KEY/', headers=headers)
+    response = requests.get(f'{config.mb_system_environments_url}{environment}/', headers=headers)
 
     if response.status_code == 401:
         accesser = Accesser()
         accesser.update_access_token()
 
-        return get_openai_api_key()
+        return _get_system_environment_value(environment)
 
     response.raise_for_status()
     result = response.json()['value']
