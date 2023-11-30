@@ -15,6 +15,7 @@ from translators import (
 import config
 from markets_bridge.utils import (
     get_openai_api_key,
+    get_openai_expensive_mode,
 )
 from translation import (
     promts,
@@ -33,7 +34,7 @@ def accurate_translate(text: str, translation_object_type: str):
         translate('iPad 9. Nesil 64 GB', 'PRODUCT')
     """
 
-    if config.is_simple_gpt:
+    if config.is_safe_translation:
         wait_for_translation()
 
     message = {'role': 'user', 'content': f'Untranslated text: "{text}"'}
@@ -43,8 +44,10 @@ def accurate_translate(text: str, translation_object_type: str):
     api_key = get_openai_api_key()
     client = OpenAI(api_key=api_key, timeout=_translation_timeout)
 
+    is_expensive = get_openai_expensive_mode()
+
     completion = client.chat.completions.create(
-        model='gpt-3.5-turbo' if config.is_simple_gpt else 'gpt-4',
+        model=get_openai_model(is_expensive),
         messages=messages,
         temperature=0,
         timeout=_translation_timeout,
@@ -53,33 +56,17 @@ def accurate_translate(text: str, translation_object_type: str):
     return completion.choices[0].message.content
 
 
-# FIXME: DRY
-def simple_translate(text: str):
+def simple_translate(text: str, is_random_translator: bool = False):
     try:
         translate = translators.translate_text(
             text,
-            translator='alibaba',
+            translator=random.choice(translators_pool) if is_random_translator else 'alibaba',
             from_language='tr',
             to_language='ru',
             timeout=_translation_timeout,
         )
     except Exception:
-        return _simple_translate_with_random_translator(text)
-
-    return translate
-
-
-def _simple_translate_with_random_translator(text: str):
-    try:
-        translate = translators.translate_text(
-            text,
-            translator=random.choice(translators_pool),
-            from_language='tr',
-            to_language='ru',
-            timeout=_translation_timeout,
-        )
-    except Exception:
-        return _simple_translate_with_random_translator(text)
+        return simple_translate(text, is_random_translator=True)
 
     return translate
 
@@ -95,3 +82,16 @@ def wait_for_translation():
             time.sleep(different + 1)
 
     _last_accurate_translate_time = datetime.now()
+
+
+def get_openai_model(is_expensive: bool) -> str:
+    """Возвращает модель GPT исходя из режима его использования (дорогой или экономный)."""
+
+    is_not_expensive, expensive = False, True
+
+    expensive_models_map = {
+        is_not_expensive: 'gpt-3.5-turbo',
+        expensive: 'gpt-4',
+    }
+
+    return expensive_models_map[is_expensive]

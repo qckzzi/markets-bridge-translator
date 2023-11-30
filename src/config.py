@@ -29,4 +29,7 @@ mb_token_refresh_url = mb_token_url + 'refresh/'
 mb_system_environments_url = mb_domain + 'api/v1/common/system_environments/'
 mb_logs_url = mb_domain + 'api/v1/common/logs/'
 
-is_simple_gpt = os.getenv('IS_SIMPLE_GPT').lower() == 'true'
+if os.getenv('IS_SAFE_TRANSLATION'):
+    is_safe_translation = os.getenv('IS_SAFE_TRANSLATION').lower() == 'true'
+else:
+    raise ValueError('Не задан IS_SAFE_TRANSLATION')
