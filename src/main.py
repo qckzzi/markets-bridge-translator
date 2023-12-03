@@ -62,4 +62,8 @@ if __name__ == '__main__':
         channel = connection.channel()
         channel.queue_declare('translation')
         channel.basic_consume('translation', callback, auto_ack=True)
-        channel.start_consuming()
+
+        try:
+            channel.start_consuming()
+        except KeyboardInterrupt:
+            pass
