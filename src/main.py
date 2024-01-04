@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import json
 import logging
+import traceback
 
 import pika
 
 from markets_bridge.utils import (
-    Sender,
+    SenderFactory,
     write_log_entry,
 )
 from translation.core import (
@@ -23,8 +24,11 @@ def callback(ch, method, properties, body):
         entity_type = message['type']
 
         logging.info(f'The "{text}" {entity_type.lower()} was received for translation.')
-
-        is_need_accurate_translation = entity_type == 'PRODUCT'
+        entities_for_accurate_translation = (
+            'PRODUCT_NAME',
+            'PRODUCT_DESCRIPTION'
+        )
+        is_need_accurate_translation = entity_type in entities_for_accurate_translation
 
         if is_need_accurate_translation:
             try:
@@ -37,21 +41,21 @@ def callback(ch, method, properties, body):
         else:
             translation = simple_translate(text)
 
-        sending_function = Sender.get_sending_method_for_entity_type(entity_type)
-        sending_function(entity_id, translation)
-
-    except KeyError as e:
-        error = f'Body validation error: {e}'
-        write_log_entry(error)
-        logging.error(error)
-        return
+        sender_cls = SenderFactory.get_sender_cls(entity_type)
+        sender_cls.send(entity_id, translation)
     except Exception as e:
-        error = f'There was a problem: {e}'
-        write_log_entry(error)
-        logging.exception(error)
+        handle_exception(e)
         return
     else:
         logging.info(f'The "{text}" {entity_type.lower()} has been translated into "{translation}"')
+
+
+# TODO: использовать Sentry
+def handle_exception(e: Exception):
+    error = f'There was a problem ({e.__class__.__name__}): {e}'
+    write_log_entry(error)
+    logging.exception(error)
+    print(traceback.format_exc())
 
 
 if __name__ == '__main__':

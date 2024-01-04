@@ -1,92 +1,141 @@
-import requests
-from requests import (
-    Response,
+from abc import (
+    ABC,
+    abstractmethod,
 )
+from typing import (
+    Literal,
+    Optional,
+    Type,
+)
+
+import requests
 
 import config
 from markets_bridge.enums import (
-    EntityType,
+    TranslationTargets,
 )
 
 
-class Sender:
-    """Отправитель данных к сервису Markets-Bridge."""
+class BaseSender(ABC):
+    """Базовый отправитель данных к Markets-Bridge."""
 
     @classmethod
-    def get_sending_method_for_entity_type(cls, entity_type: str):
-        method_for_entity_type_map = {
-            EntityType.PRODUCT: cls.send_product,
-            EntityType.CATEGORY: cls.send_category,
-            EntityType.CHARACTERISTIC: cls.send_characteristic,
-            EntityType.CHARACTERISTIC_VALUE: cls.send_characteristic_value,
-        }
+    @abstractmethod
+    def send(cls, entity_id: int, translation: str):
+        """Отправляет данные к Markets-Bridge.
 
-        return method_for_entity_type_map[entity_type]
+        Реализован этот метод, как отправка PATCH запроса для обновления перевода.
+        """
 
-    # TODO: DRY
     @classmethod
-    def send_product(cls, product_id: int, translation: str) -> Response:
-        url = config.products_url
+    def _send(cls, url: str, entity_id: int, translation: str, translation_field_name: str):
         headers = get_authorization_headers()
-        response = requests.patch(f'{url}{product_id}/', json={'translated_name': translation}, headers=headers)
+        response = requests.patch(f'{url}{entity_id}/', json={translation_field_name: translation}, headers=headers)
 
         if response.status_code == 401:
             accesser = Accesser()
             accesser.update_access_token()
 
-            return cls.send_product(product_id, translation)
+            return cls._send(url, entity_id, translation, translation_field_name)
 
         response.raise_for_status()
 
         return response
+
+class ProductNameSender(BaseSender):
+    """Сущность, обновляющая перевод наименования товаров в Markets-Bridge."""
 
     @classmethod
-    def send_category(cls, category_id: int, translation: str) -> Response:
-        url = config.categories_url
-        headers = get_authorization_headers()
-        response = requests.patch(f'{url}{category_id}/', json={'translated_name': translation}, headers=headers)
+    def send(cls, entity_id: int, translation: str):
+        return cls._send(
+            url=config.products_url,
+            entity_id=entity_id,
+            translation=translation,
+            translation_field_name='translated_name',
+        )
 
-        if response.status_code == 401:
-            accesser = Accesser()
-            accesser.update_access_token()
 
-            return cls.send_category(category_id, translation)
-
-        response.raise_for_status()
-
-        return response
+class ProductDescriptionSender(BaseSender):
+    """Сущность, обновляющая перевод описания товаров в Markets-Bridge."""
 
     @classmethod
-    def send_characteristic(cls, characteristic_id: int, translation: str) -> Response:
-        url = config.characteristics_url
-        headers = get_authorization_headers()
-        response = requests.patch(f'{url}{characteristic_id}/', json={'translated_name': translation}, headers=headers)
+    def send(cls, entity_id: int, translation: str):
+        return cls._send(
+            url=config.products_url,
+            entity_id=entity_id,
+            translation=translation,
+            translation_field_name='translated_description',
+        )
 
-        if response.status_code == 401:
-            accesser = Accesser()
-            accesser.update_access_token()
 
-            return cls.send_characteristic(characteristic_id, translation)
-
-        response.raise_for_status()
-
-        return response
+class CategoryNameSender(BaseSender):
+    """Сущность, обновляющая перевод наименования категорий в Markets-Bridge."""
 
     @classmethod
-    def send_characteristic_value(cls, value_id: int, translation: str) -> Response:
-        url = config.characteristic_values_url
-        headers = get_authorization_headers()
-        response = requests.patch(f'{url}{value_id}/', json={'translated_value': translation}, headers=headers)
+    def send(cls, entity_id: int, translation: str):
+        return cls._send(
+            url=config.categories_url,
+            entity_id=entity_id,
+            translation=translation,
+            translation_field_name='translated_name',
+        )
 
-        if response.status_code == 401:
-            accesser = Accesser()
-            accesser.update_access_token()
 
-            return cls.send_characteristic_value(value_id, translation)
+class CharacteristicNameSender(BaseSender):
+    """Сущность, обновляющая перевод наименования характеристик в Markets-Bridge."""
 
-        response.raise_for_status()
+    @classmethod
+    def send(cls, entity_id: int, translation: str):
+        return cls._send(
+            url=config.characteristics_url,
+            entity_id=entity_id,
+            translation=translation,
+            translation_field_name='translated_name',
+        )
 
-        return response
+
+class CharacteristicValueSender(BaseSender):
+    """Сущность, обновляющая перевод значений характеристик в Markets-Bridge."""
+
+    @classmethod
+    def send(cls, entity_id: int, translation: str):
+        return cls._send(
+            url=config.characteristic_values_url,
+            entity_id=entity_id,
+            translation=translation,
+            translation_field_name='translated_value',
+        )
+
+
+class SenderFactory:
+    """Фабрика, возвращающая класс отправителя."""
+
+    sender_classes_map = {
+        TranslationTargets.PRODUCT_NAME: ProductNameSender,
+        TranslationTargets.PRODUCT_DESCRIPTION: ProductDescriptionSender,
+        TranslationTargets.CATEGORY_NAME: CategoryNameSender,
+        TranslationTargets.CHARACTERISTIC_NAME: CharacteristicNameSender,
+        TranslationTargets.CHARACTERISTIC_VALUE: CharacteristicValueSender,
+    }
+
+    @classmethod
+    def get_sender_cls(
+            cls,
+            translation_target:
+            Literal[
+                'PRODUCT_NAME',
+                'PRODUCT_DESCRIPTION',
+                'CATEGORY_NAME',
+                'CHARACTERISTIC_NAME',
+                'CHARACTERISTIC_VALUE'
+            ]
+    ) -> Optional[Type[BaseSender]]:
+        try:
+            sender_cls = cls.sender_classes_map[translation_target]
+        except KeyError as e:
+            raise ValueError(f'Не существует типа отправителя для {e}')
+        else:
+            return sender_cls
 
 
 class Singleton:
