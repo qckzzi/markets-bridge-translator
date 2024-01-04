@@ -3,6 +3,9 @@ import time
 from datetime import (
     datetime,
 )
+from typing import (
+    Literal,
+)
 
 import translators
 from openai import (
@@ -27,7 +30,16 @@ _last_accurate_translate_time = None
 _translation_timeout = 30.0
 
 
-def accurate_translate(text: str, translation_object_type: str):
+def accurate_translate(
+        text: str,
+        translation_object_type: Literal[
+            'PRODUCT_NAME',
+            'PRODUCT_DESCRIPTION',
+            'CATEGORY_NAME',
+            'CHARACTERISTIC_NAME',
+            'CHARACTERISTIC_VALUE',
+        ]
+):
     """Translates text using unique promts for each translation object type.
 
     Example:
