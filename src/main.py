@@ -4,7 +4,9 @@ import logging
 import traceback
 
 import pika
+import sentry_sdk
 
+import config
 from markets_bridge.utils import (
     SenderFactory,
     write_log_entry,
@@ -60,6 +62,9 @@ def handle_exception(e: Exception):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
+
+    if config.sentry_dsn:
+        sentry_sdk.init(dsn=config.sentry_dsn, enable_tracing=True)
 
     connection_parameters = pika.ConnectionParameters(host='localhost', heartbeat=300, blocked_connection_timeout=300)
     with pika.BlockingConnection(connection_parameters) as connection:
