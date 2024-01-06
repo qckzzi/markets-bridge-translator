@@ -33,3 +33,6 @@ if os.getenv('IS_SAFE_TRANSLATION'):
     is_safe_translation = os.getenv('IS_SAFE_TRANSLATION').lower() == 'true'
 else:
     raise ValueError('Не задан IS_SAFE_TRANSLATION')
+
+# Sentry
+sentry_dsn = os.getenv('SENTRY_DSN')
